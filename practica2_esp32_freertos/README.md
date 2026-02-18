@@ -1,0 +1,1 @@
+# Práctica 2	Diseño de firmware basado en sistema operativo de tiempo real (RTOS) con ESP32
