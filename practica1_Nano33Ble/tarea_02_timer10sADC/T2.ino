@@ -25,7 +25,7 @@ void setup()
   ticker.attach(&onTimer10s, 10.0f);
 
   Serial.println("OK: Timer cada 10s activo. Espera al primer disparo...");
-  Serial.println("Nota: Como no hay nada conectado a A0, el ADC puede variar.");
+  
 }
 
 void loop()
