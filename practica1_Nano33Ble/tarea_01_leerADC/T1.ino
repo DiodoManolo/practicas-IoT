@@ -3,7 +3,7 @@
 
 const int ADC_PIN = A0;
 
-// Si quieres 12 bits (0..4095) en esta placa, descomenta:
+
 const int ADC_BITS = 12;  // 10 o 12 típicamente
 
 unsigned long t0 = 0;
