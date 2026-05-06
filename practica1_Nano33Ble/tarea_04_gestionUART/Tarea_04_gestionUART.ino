@@ -94,7 +94,7 @@ void stopAdcStream()
 // Activa el envío periódico cada 'seconds' segundos
 void startAdcStream(uint32_t seconds)
 {
-  adcTicker.detach();   // por si ya había uno activo
+  adcTicker.detach();   // por si ya había uno activo, .detach deteien el temporizador
 
   noInterrupts();
   adcTicksPending = 0;
@@ -133,7 +133,7 @@ void processCommand(String cmd)
 
   // -------- Comando ADC --------
   // Si recibimos "ADC", enviamos una sola lectura actual
-  if (cmd.equalsIgnoreCase("ADC"))
+  if (cmd.equalsIgnoreCase("ADC")) //Comprueba si cmd es igual a "ADC" sin importar mayúsculas o minúsculas.
   {
     sendCurrentAdc();
     return;
@@ -146,7 +146,7 @@ void processCommand(String cmd)
   // ADC(0) -> parar envío periódico
   if (cmd.startsWith("ADC(") && cmd.endsWith(")"))
   {
-    String arg = cmd.substring(4, cmd.length() - 1);
+    String arg = cmd.substring(4, cmd.length() - 1); //Lee lo que va dentro del parentesis por posición
     arg.trim();
 
     if (!isUnsignedInteger(arg))
@@ -208,7 +208,7 @@ void readSerialCommands()
       if (rxLine.length() > 0)
       {
         processCommand(rxLine);
-        rxLine = "";
+        rxLine = ""; // Vacia el String
       }
     }
     else
