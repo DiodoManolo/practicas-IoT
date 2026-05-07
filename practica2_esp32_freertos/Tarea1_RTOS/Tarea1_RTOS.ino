@@ -57,4 +57,3 @@ void setup() {
 void loop() {
   // No usamos loop porque el trabajo lo hacen las tareas de FreeRTOS.
   vTaskDelay(pdMS_TO_TICKS(1000));
-}

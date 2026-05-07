@@ -1,91 +1,86 @@
 // Práctica 2 - Tarea 2
 // ESP32 + FreeRTOS + MPU6050 por I2C
 //
-// Tarea 1: muestrea la aceleración cada 100 ms
-// Tarea 2: manda los datos por UART cada 1 segundo
-//          y activa un LED durante 200 ms
+// Tarea 1: lee aceleración cada 100 ms
+// Tarea 2: manda los datos por UART cada 1 s
+//          y enciende un LED durante 200 ms
 
 #include <Wire.h>
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
 
 #define LED_PIN 23
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-Adafruit_MPU6050 mpu;
+#define MPU_ADDR 0x68   // Dirección I2C normal del MPU6050
 
-// Estructura para guardar una muestra de aceleración
-typedef struct {
-  unsigned long tiempo_ms;
-  float ax;
-  float ay;
-  float az;
-} MuestraAccel;
+// Variables globales donde guardamos la última aceleración leída
+float ax = 0;
+float ay = 0;
+float az = 0;
 
-// Cola donde la tarea del sensor deja datos
-// y la tarea UART los recoge
-QueueHandle_t colaMuestras;
+int contadorMuestras = 0;
 
 // ---------------- TAREA DE MUESTREO ----------------
 void tareaMuestreo(void *parameter) {
   TickType_t tiempoAnterior = xTaskGetTickCount();
 
   while (true) {
-    sensors_event_t aceleracion, giro, temperatura;
+    // Pedimos al MPU6050 que empiece a leer desde el registro 0x3B,
+    // que es donde empiezan los datos de aceleración
+    Wire.beginTransmission(MPU_ADDR);
+    Wire.write(0x3B);
+    Wire.endTransmission(false);
 
-    // Leemos el sensor
-    mpu.getEvent(&aceleracion, &giro, &temperatura);
+    // Pedimos 6 bytes: 2 para X, 2 para Y y 2 para Z
+    Wire.requestFrom(MPU_ADDR, 6, true);
 
-    // Guardamos los datos de aceleración
-    MuestraAccel muestra;
-    muestra.tiempo_ms = millis();
-    muestra.ax = aceleracion.acceleration.x;
-    muestra.ay = aceleracion.acceleration.y;
-    muestra.az = aceleracion.acceleration.z;
+    if (Wire.available() == 6) {
+      int16_t rawX = (Wire.read() << 8) | Wire.read();
+      int16_t rawY = (Wire.read() << 8) | Wire.read();
+      int16_t rawZ = (Wire.read() << 8) | Wire.read();
 
-    // Enviamos la muestra a la cola
-    xQueueSend(colaMuestras, &muestra, 0);
+      // Convertimos a m/s2.
+      // En rango ±2g, el MPU6050 usa 16384 cuentas por cada g.
+      ax = (rawX / 16384.0) * 9.81;
+      ay = (rawY / 16384.0) * 9.81;
+      az = (rawZ / 16384.0) * 9.81;
 
-    // Esperamos hasta el siguiente periodo de 100 ms
+      contadorMuestras++;
+    }
+
+    // Espera hasta completar un periodo de 100 ms
     vTaskDelayUntil(&tiempoAnterior, pdMS_TO_TICKS(100));
   }
 }
 
 // ---------------- TAREA DE ENVÍO UART ----------------
-void tareaEnvioUART(void *parameter) {
+void tareaUART(void *parameter) {
   TickType_t tiempoAnterior = xTaskGetTickCount();
 
   while (true) {
     // Esta tarea se ejecuta cada 1 segundo
     vTaskDelayUntil(&tiempoAnterior, pdMS_TO_TICKS(1000));
 
-    digitalWrite(LED_PIN, HIGH);   // Activamos LED al enviar
+    // Encendemos LED al enviar datos
+    digitalWrite(LED_PIN, HIGH);
 
-    Serial.println();
-    Serial.println("----- ENVIO DE DATOS CADA 1 s -----");
-    Serial.println("tiempo_ms; ax; ay; az");
+    Serial.print("Muestras tomadas en el ultimo segundo: ");
+    Serial.println(contadorMuestras);
 
-    MuestraAccel muestra;
-    int contador = 0;
+    Serial.print("ax = ");
+    Serial.print(ax, 3);
+    Serial.print(" m/s2, ay = ");
+    Serial.print(ay, 3);
+    Serial.print(" m/s2, az = ");
+    Serial.print(az, 3);
+    Serial.println(" m/s2");
 
-    // Sacamos de la cola todas las muestras disponibles
-    while (xQueueReceive(colaMuestras, &muestra, 0) == pdTRUE) {
-      Serial.print(muestra.tiempo_ms);
-      Serial.print("; ");
-      Serial.print(muestra.ax);
-      Serial.print("; ");
-      Serial.print(muestra.ay);
-      Serial.print("; ");
-      Serial.println(muestra.az);
+    Serial.println("--------------------------------");
 
-      contador++;
-    }
+    // Reiniciamos el contador para el siguiente segundo
+    contadorMuestras = 0;
 
-    Serial.print("Muestras enviadas: ");
-    Serial.println(contador);
-
-    // Mantenemos el LED encendido 200 ms
+    // LED encendido durante 200 ms
     vTaskDelay(pdMS_TO_TICKS(200));
     digitalWrite(LED_PIN, LOW);
   }
@@ -99,14 +94,21 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  Serial.println("Inicio de la Tarea 2 con FreeRTOS");
+  Serial.println("Inicio Tarea 2 - ESP32 FreeRTOS + MPU6050");
 
-  // Inicializamos I2C en los pines típicos del ESP32
+  // Inicializamos I2C
   Wire.begin(SDA_PIN, SCL_PIN);
 
-  // Inicializamos el MPU6050
-  if (!mpu.begin()) {
-    Serial.println("Error: no se detecta el MPU6050");
+  // Despertamos el MPU6050.
+  // El registro 0x6B controla el modo sleep.
+  // Escribimos 0 para sacarlo del modo reposo.
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x6B);
+  Wire.write(0);
+  byte error = Wire.endTransmission(true);
+
+  if (error != 0) {
+    Serial.println("ERROR: No se detecta el MPU6050");
     Serial.println("Revisa VCC, GND, SDA y SCL");
 
     while (true) {
@@ -119,22 +121,7 @@ void setup() {
 
   Serial.println("MPU6050 detectado correctamente");
 
-  // Configuración básica del sensor
-  mpu.setAccelerometerRange(MPU6050_RANGE_2_G);
-  mpu.setGyroRange(MPU6050_RANGE_250_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-
-  // Creamos la cola.
-  // Como muestreamos cada 100 ms y enviamos cada 1 s,
-  // normalmente habrá unas 10 muestras por envío.
-  colaMuestras = xQueueCreate(20, sizeof(MuestraAccel));
-
-  if (colaMuestras == NULL) {
-    Serial.println("Error creando la cola");
-    while (true);
-  }
-
-  // Creamos la tarea de muestreo
+  // Creamos tarea de muestreo
   xTaskCreate(
     tareaMuestreo,
     "Tarea Muestreo",
@@ -144,9 +131,9 @@ void setup() {
     NULL
   );
 
-  // Creamos la tarea de envío por UART
+  // Creamos tarea UART
   xTaskCreate(
-    tareaEnvioUART,
+    tareaUART,
     "Tarea UART",
     4096,
     NULL,
@@ -157,6 +144,6 @@ void setup() {
 
 // ---------------- LOOP ----------------
 void loop() {
-  // El loop queda libre porque el trabajo lo hacen las tareas
+  // El trabajo lo hacen las tareas
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
