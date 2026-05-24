@@ -4,14 +4,13 @@ from pathlib import Path
 import serial
 
 # === CONFIGURA ESTO ===
-PORT = "COM11"        # cambia si tu puerto es otro
+PORT = "COM13"        # cambia si tu puerto es otro
 BAUD = 115200
-OUT_FILE = Path("imu_log.txt")  # se crea en la carpeta del proyecto
+OUT_FILE = Path("imu_log.csv")  # se crea en la carpeta del proyecto
 WRITE_HEADER = True             # pone una cabecera opcional
 
 def main():
     print(f"Abriendo {PORT} a {BAUD}...")
-    print("Cierra el Serial Monitor del Arduino IDE si lo tienes abierto.")
     print(f"Guardando en: {OUT_FILE.resolve()}")
     print("Ctrl+C para parar.\n")
 
