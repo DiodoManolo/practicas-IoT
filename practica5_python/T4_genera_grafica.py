@@ -19,9 +19,7 @@ def parse_line(line: str):
     line = line.strip()
     if not line or line.startswith("#"):
         return None
-    parts = line.split(";")
-    if len(parts) < 2:
-        return None
+    parts = line.split(";") #Divide la línea por ;
     try:
         t_ms = int(parts[0])
         values = [float(x) for x in parts[1:]]  # ax..mz
@@ -43,12 +41,12 @@ def main():
     ser.reset_input_buffer()
 
     window_samples = []
-    window_start = time.time()
+    window_start = time.time() # Guarda el instante en el que empezó la ventana.
 
     times, means, stds = [], [], []
-    start_time = time.time()
+    start_time = time.time() #Momento “cero” para que el eje X sea tiempo relativo.
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots() #Crea una ventana y unos ejes.
     line_mean, = ax.plot([], [], marker="o", label="media")
     line_plus, = ax.plot([], [], linestyle="--", label="media + std")
     line_minus, = ax.plot([], [], linestyle="--", label="media - std")
@@ -58,22 +56,22 @@ def main():
     ax.grid(True)
     ax.legend()
 
-    def update(_frame):
+    def update(_frame): #_frame es una variable que recibe el número de cuadro actual de la animación con "_" decimos que no lo vamos a utilizar dentro del codigo
         nonlocal window_start, window_samples
 
         # leer 1 línea por update (simple y robusto)
         raw = ser.readline()
         if raw:
-            line = raw.decode("utf-8", errors="replace")
+            line = raw.decode("utf-8", errors="replace") #Convierte bytes a texto.
             parsed = parse_line(line)
             if parsed is not None:
                 _, values = parsed
                 idx = COL - 1
                 if 0 <= idx < len(values):
-                    window_samples.append(values[idx])
+                    window_samples.append(values[idx]) #Si el índice es válido, añade la muestra a la ventana.
 
         now = time.time()
-        if (now - window_start) >= WINDOW_SECONDS:
+        if (now - window_start) >= WINDOW_SECONDS: #Si han pasado 5s desde el inicio de la ventana:
             m, s = mean_std(window_samples)
             print(f"5s -> muestras={len(window_samples)} media={m} std={s}")
             if m is not None:
@@ -81,26 +79,26 @@ def main():
                 times.append(t_rel)
                 means.append(m)
                 stds.append(s)
-            window_samples = []
+            window_samples = [] #Reinicia la ventana de 5 s.
             window_start = now
 
         if len(times) > 0:
-            line_mean.set_data(times, means)
-            line_plus.set_data(times, [m + s for m, s in zip(means, stds)])
+            line_mean.set_data(times, means)  #set_data dibuja la linea con los datos que haya
+            line_plus.set_data(times, [m + s for m, s in zip(means, stds)]) #zip combina dos o mas listas elemento por elemento
             line_minus.set_data(times, [m - s for m, s in zip(means, stds)])
 
-            ax.set_xlim(0, max(times) + 1)
+            ax.set_xlim(0, max(times) + 1) #Ajusta el eje X para que se vea todo.
 
             y_all = []
             for m, s in zip(means, stds):
                 y_all += [m - s, m + s]
             ymin, ymax = min(y_all), max(y_all)
             pad = (ymax - ymin) * 0.1 if ymax > ymin else 0.1
-            ax.set_ylim(ymin - pad, ymax + pad)
+            ax.set_ylim(ymin - pad, ymax + pad) #Ajusta límites del eje Y con un margen (pad) para que no quede pegado.
 
         return line_mean, line_plus, line_minus
 
-    def on_close(_event):
+    def on_close(_event): #Si cierras la ventana, se cierra el puerto serie
         ser.close()
 
     fig.canvas.mpl_connect("close_event", on_close)
