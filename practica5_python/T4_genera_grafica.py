@@ -2,7 +2,7 @@ import time
 import serial
 
 import matplotlib
-matplotlib.use("TkAgg")  # fuerza ventana real (muy importante en PyCharm)
+matplotlib.use("TkAgg")  # fuerza ventana real
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -66,7 +66,7 @@ def main():
             parsed = parse_line(line)
             if parsed is not None:
                 _, values = parsed
-                idx = COL - 1
+                idx = COL - 1 #coge solo la tercera columna de los values, az
                 if 0 <= idx < len(values):
                     window_samples.append(values[idx]) #Si el índice es válido, añade la muestra a la ventana.
 
