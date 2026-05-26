@@ -2,6 +2,7 @@
 #include <WebServer.h>
 #include "time.h"
 
+// http://10.16.127.123
 const char* ssid = "Manolo_movil";
 const char* password = "12345678";
 

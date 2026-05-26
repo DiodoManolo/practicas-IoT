@@ -2,7 +2,7 @@
 #include "AdafruitIO_WiFi.h"
 
 #define IO_USERNAME  "ManoloGomez"
-#define IO_KEY       "IO_KEY"
+#define IO_KEY       " IO_KEY "
 
 const char* ssid = "Manolo_movil";
 const char* password = "12345678";

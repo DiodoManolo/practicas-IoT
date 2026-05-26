@@ -15,7 +15,7 @@ COL = 3  # 1=ax 2=ay 3=az ... (0 es tiempo)
 #ax;ay;az;gx;gy;gz;mx;my;mz
 # ==================
 
-def parse_line(line: str):
+def parse_line(line: str): #convierte texto a números
     line = line.strip()
     if not line or line.startswith("#"):
         return None
@@ -59,7 +59,7 @@ def main():
     def update(_frame): #_frame es una variable que recibe el número de cuadro actual de la animación con "_" decimos que no lo vamos a utilizar dentro del codigo
         nonlocal window_start, window_samples
 
-        # leer 1 línea por update (simple y robusto)
+        # leer 1 línea por update
         raw = ser.readline()
         if raw:
             line = raw.decode("utf-8", errors="replace") #Convierte bytes a texto.
@@ -76,7 +76,7 @@ def main():
             print(f"5s -> muestras={len(window_samples)} media={m} std={s}")
             if m is not None:
                 t_rel = now - start_time
-                times.append(t_rel)
+                times.append(t_rel) #añade al vector time otro punto conservando los anterires.
                 means.append(m)
                 stds.append(s)
             window_samples = [] #Reinicia la ventana de 5 s.

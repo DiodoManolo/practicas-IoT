@@ -37,8 +37,7 @@ def main():
                 if line.startswith("#"):
                     continue
 
-                # Si tu Arduino ya envía con ';', lo guardamos tal cual.
-                # (Ejemplo: "46126;-0.02;...;-10.98")
+
                 # Aseguramos salto de línea final:
                 f.write(line + "\n")
 
